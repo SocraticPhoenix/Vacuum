@@ -32,14 +32,14 @@ public class Vacuum {
             output = false;
         }
 
-        if (output) System.out.print("How wide is the widest floor: ");
+        if (output) System.out.print("How many rows in a floor: ");
         int rows = Integer.parseInt(scanner.nextLine());
         if (rows <= 0) {
             if (output) System.out.println("Floors must be wider than 0");
             return;
         }
 
-        if (output) System.out.print("How long is the longest floor: ");
+        if (output) System.out.print("How many columns in a floor: ");
         int cols = Integer.parseInt(scanner.nextLine());
         if (cols <= 0) {
             if (output) System.out.println("Floors must be longer than 0");
@@ -111,16 +111,39 @@ public class Vacuum {
 
         List<String> animation = new ArrayList<>();
         animation.add(frame(vacuum, dirt, array));
+        byte room = 0;
 
         List<Point> path;
-        while (!(path = pathfind(vacuum, dirt::contains, array)).isEmpty()) {
-            for (int i = 1; i < path.size(); i++) {
-                animation.add(frame(path.get(i), dirt, array));
-                System.out.println("Move to " + path.get(i));
+        while (true) {
+            if (room != 0) {
+                byte finalRoom = room;
+                path = pathfind(vacuum, p -> dirt.contains(p) && finalRoom == p.get(array), array);
+                if (path.isEmpty()) {
+                    path = pathfind(vacuum, dirt::contains, array);
+                }
+            } else {
+                path = pathfind(vacuum, dirt::contains, array);
             }
-            vacuum = path.get(path.size() - 1);
-            dirt.remove(vacuum);
-            System.out.println("Clean " + vacuum);
+
+            if (!path.isEmpty()) {
+                for (int i = 1; i < path.size(); i++) {
+                    Point point = path.get(i);
+                    animation.add(frame(point, dirt, array));
+                    System.out.println("Move to " + point);
+                    if (dirt.contains(point)) {
+                        System.out.println("Clean " + point);
+                        dirt.remove(point);
+                    }
+                }
+                vacuum = path.get(path.size() - 1);
+                room = vacuum.get(array);
+            } else {
+                break;
+            }
+        }
+
+        while (!(path = pathfind(vacuum, dirt::contains, array)).isEmpty()) {
+
         }
         System.out.println("All done");
         if (!dirt.isEmpty()) {
@@ -199,7 +222,7 @@ public class Vacuum {
             } else {
                 visited.add(point);
                 for (Point neighbor : neighbors(point, space)) {
-                    double score = scores.get(point) + 1;
+                    double score = scores.get(point) + (neighbor.floor == point.floor ? 1 : 2);
                     if (score < scores.getOrDefault(neighbor, Double.POSITIVE_INFINITY)) {
                         pathTracker.put(neighbor, point);
                         scores.put(neighbor, score);
