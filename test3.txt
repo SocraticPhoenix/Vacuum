@@ -2,8 +2,8 @@
 7
 1
 #######
-#AAAAA#
-#BBBBB#
+#AAA#A#
+#BBB###
 #BBBBB#
 #BBBBB#
 #BBBBB#

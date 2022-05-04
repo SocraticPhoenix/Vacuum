@@ -1,3 +1,5 @@
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -17,7 +19,7 @@ public class Vacuum {
     public static final byte WALL = 0;
     public static final byte STAIR = 1;
 
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws FileNotFoundException, InterruptedException {
         Scanner scanner;
         boolean output;
 
@@ -107,10 +109,13 @@ public class Vacuum {
 
         dirt.remove(vacuum);
 
-        //At each step, pathfind to nearest dirty sqaure and clean it
+        List<String> animation = new ArrayList<>();
+        animation.add(frame(vacuum, dirt, array));
+
         List<Point> path;
-        while (!(path = astar(vacuum, dirt::contains, array)).isEmpty()) {
+        while (!(path = pathfind(vacuum, dirt::contains, array)).isEmpty()) {
             for (int i = 1; i < path.size(); i++) {
+                animation.add(frame(path.get(i), dirt, array));
                 System.out.println("Move to " + path.get(i));
             }
             vacuum = path.get(path.size() - 1);
@@ -122,14 +127,62 @@ public class Vacuum {
             System.out.println("Couldn't reach:");
             dirt.forEach(System.out::println);
         }
+        if (output) System.out.print("Would you like an animation (true/false): ");
+        boolean animate = Boolean.parseBoolean(scanner.nextLine());
+
+        if (animate) {
+            JTextArea area = new JTextArea();
+            area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 24));
+            area.setEditable(false);
+
+            JFrame frame = new JFrame();
+            frame.add(area);
+            frame.setSize(512, 512);
+            frame.setVisible(true);
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+            int index = 0;
+            while (true) {
+                area.setText(animation.get(index));
+                Thread.sleep(250);
+                index++;
+                if (index >= animation.size()) {
+                    index = 0;
+                }
+            }
+        }
     }
 
-    private static List<Point> astar(Point start, Predicate<Point> end, byte[][][] space) {
+    private static String frame(Point location, Set<Point> dirty, byte[][][] space) {
+        StringBuilder builder = new StringBuilder();
+        byte[][] floor = space[location.floor];
+        for (int i = 0; i < floor.length; i++) {
+            for (int j = 0; j < floor[i].length; j++) {
+
+                if (i == location.row && j == location.col) {
+                    builder.append("@");
+                } else if (floor[i][j] == WALL) {
+                    builder.append("#");
+                } else if (floor[i][j] == STAIR) {
+                    builder.append("%");
+                } else if (dirty.contains(new Point(location.floor, i, j))) {
+                    builder.append(".");
+                } else {
+                 builder.append(" ");
+                }
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
+    private static List<Point> pathfind(Point start, Predicate<Point> end, byte[][][] space) {
         Set<Point> visited = new HashSet<>();
         Map<Point, Point> pathTracker = new HashMap<>();
-        Map<Point, Double> scores = new HashMap<>();
 
+        Map<Point, Double> scores = new HashMap<>();
         scores.put(start, 0.0);
+
         Queue<Point> queue = new PriorityQueue<>(Comparator.comparingDouble(scores::get));
         queue.add(start);
 
@@ -163,15 +216,14 @@ public class Vacuum {
 
     private static List<Point> neighbors(Point point, byte[][][] space) {
         List<Point> neighbors = new ArrayList<>();
+        neighbors.add(new Point(point.floor, point.row, point.col + 1));
+        neighbors.add(new Point(point.floor, point.row, point.col - 1));
+        neighbors.add(new Point(point.floor, point.row + 1, point.col));
+        neighbors.add(new Point(point.floor, point.row - 1, point.col));
         if (point.get(space) == STAIR) {
             neighbors.add(point.copyWithX(point.floor + 1));
             neighbors.add(point.copyWithX(point.floor - 1));
         }
-        neighbors.add(new Point(point.floor, point.row + 1, point.col));
-        neighbors.add(new Point(point.floor, point.row - 1, point.col));
-        neighbors.add(new Point(point.floor, point.row, point.col + 1));
-        neighbors.add(new Point(point.floor, point.row, point.col - 1));
-
         return neighbors.stream().filter(p -> p.within(space) && p.get(space) != WALL).collect(Collectors.toList());
     }
 
