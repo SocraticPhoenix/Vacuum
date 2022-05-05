@@ -141,10 +141,6 @@ public class Vacuum {
                 break;
             }
         }
-
-        while (!(path = pathfind(vacuum, dirt::contains, array)).isEmpty()) {
-
-        }
         System.out.println("All done");
         if (!dirt.isEmpty()) {
             System.out.println("Couldn't reach:");
